@@ -30,6 +30,7 @@
 #include "opentelemetry/exporters/otlp/otlp_environment.h"
 #include "opentelemetry/baggage/propagation/baggage_propagator.h"
 #include <module_version.h>
+#include <cctype>
 #include <fstream>
 #include <iostream>
 
@@ -52,6 +53,29 @@ namespace {
   constexpr const char* PROTOCOL_GRPC = "grpc";
   constexpr const char* PROTOCOL_HTTP_PROTOBUF = "http/protobuf";
   constexpr const char* PROTOCOL_HTTP_JSON = "http/json";
+
+  // The README and the sample opentelemetry_module.conf document the sampler and
+  // processor values as "AlwaysOn", "AlwaysOff" and "Batch", while the constants
+  // above are "always_on", "always_off" and "batch". An exact comparison makes the
+  // documented values fall through to the default, so "AlwaysOff" silently samples
+  // everything. Compare ignoring case, '_' and '-' so both spellings are accepted.
+  std::string normalizeType(const std::string& value)
+  {
+    std::string out;
+    out.reserve(value.size());
+    for (char c : value) {
+      if (c == '_' || c == '-') {
+        continue;
+      }
+      out.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
+    }
+    return out;
+  }
+
+  bool isType(const std::string& value, const char* type)
+  {
+    return normalizeType(value) == normalizeType(type);
+  }
 }
 
 SdkHelperFactory::SdkHelperFactory(
@@ -242,11 +266,11 @@ OtelSpanProcessor SdkHelperFactory::GetSpanProcessor(
 {
     auto processor = OtelSpanProcessor{};
     auto type = config->getOtelProcessorType();
-    if (type == SIMPLE_PROCESSOR) {
+    if (isType(type, SIMPLE_PROCESSOR)) {
         processor.reset(
                 new opentelemetry::sdk::trace::SimpleSpanProcessor(std::move(exporter)));
     } else {
-        if (type != BATCH_PROCESSOR) {
+        if (!isType(type, BATCH_PROCESSOR)) {
            // default is batch processor
            LOG4CXX_WARN(mLogger, "Received unknown processor type: " << type << ". Will create default(batch) processor");
            type = BATCH_PROCESSOR;
@@ -267,14 +291,14 @@ OtelSampler SdkHelperFactory::GetSampler(
     auto sampler = OtelSampler{};
     auto type = config->getOtelSamplerType();
 
-    if (type == ALWAYS_OFF_SAMPLER) {
+    if (isType(type, ALWAYS_OFF_SAMPLER)) {
         sampler.reset(new sdk::trace::AlwaysOffSampler);
-    } else if (type == TRACE_ID_RATIO_BASED_SAMPLER) { // TODO
+    } else if (isType(type, TRACE_ID_RATIO_BASED_SAMPLER)) { // TODO
         ;
-    } else if (type == PARENT_BASED_SAMPLER) { // TODO
+    } else if (isType(type, PARENT_BASED_SAMPLER)) { // TODO
         ;
     } else {
-        if (type != ALWAYS_ON_SAMPLER) {
+        if (!isType(type, ALWAYS_ON_SAMPLER)) {
           // default is always_on sampler
           LOG4CXX_WARN(mLogger, "Received unknown sampler type: " << type << ". Will create default(always_on) sampler");
           type = ALWAYS_ON_SAMPLER;
