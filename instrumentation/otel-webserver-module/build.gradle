@@ -196,7 +196,8 @@ task stageLibrary(type: Copy) {
     from("${modDepDir}/opentelemetry/${cppSDKVersion}/lib/libopentelemetry_instrumentation_scope.so") { it.into "sdk_lib/lib" }
     from("${modDepDir}/opentelemetry/${cppSDKVersion}/lib/libopentelemetry_logs.so") { it.into "sdk_lib/lib" }
     from("${modDepDir}/opentelemetry/${cppSDKVersion}/lib/libopentelemetry_metrics.so") { it.into "sdk_lib/lib" }
-    // libopentelemetry_otlp_recordable / libopentelemetry_exporter_otlp_grpc(_client) are now
+    from("${modDepDir}/opentelemetry/${cppSDKVersion}/lib/libopentelemetry_http_client_curl.so") { it.into "sdk_lib/lib" }
+    // libopentelemetry_otlp_recordable / libopentelemetry_exporter_otlp_grpc(_client) / libopentelemetry_exporter_otlp_http(_client) are now
     // static (.a) - protobuf builds STATIC via gRPC's vendored build, which forces these OTLP
     // targets static too (see exporters/otlp/CMakeLists.txt's protobuf_lib_type check) - they're
     // linked directly into libopentelemetry_webserver_sdk.so, not shipped as separate .so files.

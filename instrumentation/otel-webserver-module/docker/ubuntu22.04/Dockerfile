@@ -17,6 +17,7 @@ RUN apt-get install -qq -y --ignore-missing \
     xz-utils                                \
     zlib1g-dev                               \
     libssl-dev                               \
+    libcurl4-openssl-dev                     \
     libffi-dev
 
 RUN apt-get install -y \
@@ -114,7 +115,7 @@ RUN printf 'find_package(absl CONFIG REQUIRED)\nfind_package(utf8_range CONFIG R
     && git submodule update --init --recursive \
     && mkdir build \
     && cd build \
-    && cmake .. -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=ON -DOTELCPP_WITH_OTLP_GRPC=ON -DCMAKE_CXX_STANDARD=17 -DCMAKE_PROJECT_INCLUDE=/usr/local/lib/cmake/grpc-preload.cmake -DCMAKE_INSTALL_PREFIX=/dependencies/opentelemetry/${OPENTELEMETRY_VERSION} \
+    && cmake .. -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=ON -DOTELCPP_WITH_OTLP_GRPC=ON -DOTELCPP_WITH_OTLP_HTTP=ON -DCMAKE_CXX_STANDARD=17 -DCMAKE_PROJECT_INCLUDE=/usr/local/lib/cmake/grpc-preload.cmake -DCMAKE_INSTALL_PREFIX=/dependencies/opentelemetry/${OPENTELEMETRY_VERSION} \
     && cmake --build . --target all \
     && cd .. \
     && find . -name "*.so" -type f -exec cp {} /dependencies/opentelemetry/${OPENTELEMETRY_VERSION}/lib/ \; \

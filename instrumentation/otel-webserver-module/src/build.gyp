@@ -73,6 +73,9 @@
           '$(ANSDK_DIR)/opentelemetry/$(CPP_SDK_VERSION)/lib/libopentelemetry_otlp_common.a',
           '$(ANSDK_DIR)/opentelemetry/$(CPP_SDK_VERSION)/lib/libopentelemetry_exporter_otlp_grpc.a',
           '$(ANSDK_DIR)/opentelemetry/$(CPP_SDK_VERSION)/lib/libopentelemetry_exporter_otlp_grpc_client.a',
+          # OTLP/HTTP exporter: static for the same protobuf_lib_type reason as otlp_grpc.
+          '$(ANSDK_DIR)/opentelemetry/$(CPP_SDK_VERSION)/lib/libopentelemetry_exporter_otlp_http.a',
+          '$(ANSDK_DIR)/opentelemetry/$(CPP_SDK_VERSION)/lib/libopentelemetry_exporter_otlp_http_client.a',
           # generated protobuf/gRPC stub code for OTLP's own .proto definitions - needed
           # explicitly now that otlp_recordable/otlp_grpc are static rather than .so.
           '$(ANSDK_DIR)/opentelemetry/$(CPP_SDK_VERSION)/lib/libopentelemetry_proto.a',
@@ -205,6 +208,10 @@
           '/usr/local/lib/libabsl_utf8_for_code_point.a',
           '/usr/local/lib/libabsl_vlog_config_internal.a',
           '-Wl,--end-group',
+          # The curl HTTP client is not an OTLP target, so it stays shared (BUILD_SHARED_LIBS=ON)
+          # and links the system libcurl.
+          '$(ANSDK_DIR)/opentelemetry/$(CPP_SDK_VERSION)/lib/libopentelemetry_http_client_curl.so',
+          '-lcurl',
           # GCC 8.5's std::filesystem lives in a separate static lib, not folded into
           # libstdc++ until GCC 9+.
           '-lstdc++fs',
