@@ -1,0 +1,30 @@
+name: eyecare apache module crash repro
+on:
+  workflow_dispatch:
+    inputs:
+      artifact_run_id:
+        description: run id that produced opentelemetry-webserver-sdk-x64-linux.tgz
+        required: true
+permissions:
+  contents: read
+  actions: read
+jobs:
+  repro:
+    runs-on: ubuntu-22.04
+    container:
+      image: almalinux:8
+      options: --cap-add=SYS_PTRACE --security-opt seccomp=unconfined
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: opentelemetry-webserver-sdk-x64-linux.tgz
+          run-id: ${{ inputs.artifact_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: /tmp/art
+      - name: unpack
+        run: mkdir -p /p && tar -xzf /tmp/art/opentelemetry-webserver-sdk-x64-linux.tgz -C /p && ls /p
+      - name: repro under gdb
+        run: bash .github/repro/run.sh
