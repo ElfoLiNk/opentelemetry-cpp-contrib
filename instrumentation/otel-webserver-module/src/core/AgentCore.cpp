@@ -15,6 +15,7 @@
 */
 
 #include "AgentCore.h"
+#include "sdkwrapper/SdkHelperFactory.h"
 
 namespace otel {
 namespace core {
@@ -98,6 +99,7 @@ TenantConfig::copyAllExceptNamespaceNameId(const TenantConfig& copyfrom)
 void
 AgentCore::stop()
 {
+    sdkwrapper::SdkHelperFactory::ShutdownAll(mLogger);
     LOG4CXX_INFO(mLogger, "AgentCore Stopped.");
     mLogger = nullptr;
 }

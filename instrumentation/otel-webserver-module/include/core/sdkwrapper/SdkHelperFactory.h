@@ -30,6 +30,7 @@
 #include <opentelemetry/sdk/resource/resource.h>
 #include "sdkwrapper/ISdkHelperFactory.h"
 #include <opentelemetry/sdk/trace/sampler.h>
+#include <opentelemetry/sdk/trace/tracer_provider.h>
 #include "opentelemetry/trace/tracer_provider.h"
 #include "sdkwrapper/ISdkWrapper.h"
 #include "AgentLogger.h"
@@ -54,6 +55,11 @@ public:
 
 	OtelPropagators& GetPropagators() override;
 
+	// Flushes and shuts down every TracerProvider this process created. Called when an
+	// Apache child exits: the batch processor otherwise still holds up to one
+	// scheduled delay of spans, and nothing else drains it before the process ends.
+	static void ShutdownAll(const AgentLogger& logger);
+
 private:
 	OtelSpanExporter GetExporter(std::shared_ptr<TenantConfig> config);
 
@@ -65,6 +71,8 @@ private:
     // Therefore, tracer provided can't be stored as global variable and needs to be accessed
     // per WebserverContext.
     OtelTracerProvider mTracerProvider;
+    // Same object as mTracerProvider, typed as the SDK provider so it can be shut down.
+    std::shared_ptr<opentelemetry::sdk::trace::TracerProvider> mSdkTracerProvider;
 	OtelTracer mTracer;
 	OtelPropagators mPropagators;
 	const AgentLogger& mLogger;

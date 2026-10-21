@@ -31,6 +31,8 @@
 #include "opentelemetry/baggage/propagation/baggage_propagator.h"
 #include <module_version.h>
 #include <cctype>
+#include <mutex>
+#include <vector>
 #include <chrono>
 #include <fstream>
 #include <iostream>
@@ -79,6 +81,44 @@ namespace {
   }
 }
 
+namespace {
+  std::mutex& providersMutex()
+  {
+    static std::mutex m;
+    return m;
+  }
+
+  std::vector<std::shared_ptr<opentelemetry::sdk::trace::TracerProvider>>& providers()
+  {
+    static std::vector<std::shared_ptr<opentelemetry::sdk::trace::TracerProvider>> v;
+    return v;
+  }
+
+  void registerProvider(std::shared_ptr<opentelemetry::sdk::trace::TracerProvider> provider)
+  {
+    std::lock_guard<std::mutex> lock(providersMutex());
+    providers().push_back(std::move(provider));
+  }
+}
+
+void SdkHelperFactory::ShutdownAll(const AgentLogger& logger)
+{
+    std::vector<std::shared_ptr<opentelemetry::sdk::trace::TracerProvider>> toShutdown;
+    {
+        std::lock_guard<std::mutex> lock(providersMutex());
+        toShutdown.swap(providers());
+    }
+    for (auto& provider : toShutdown) {
+        // Shutdown() drains the batch processor queue and exports it before stopping.
+        // Bound it: the default timeout is unlimited, and an unreachable collector
+        // must not keep an exiting Apache child alive.
+        bool ok = provider->Shutdown(std::chrono::seconds(5));
+        if (logger) {
+            LOG4CXX_INFO(logger, "TracerProvider shutdown " << (ok ? "completed" : "failed"));
+        }
+    }
+}
+
 SdkHelperFactory::SdkHelperFactory(
     std::shared_ptr<TenantConfig> config,
     const AgentLogger& logger) :
@@ -113,12 +153,13 @@ SdkHelperFactory::SdkHelperFactory(
     auto processor = GetSpanProcessor(config, std::move(exporter));
     auto sampler = GetSampler(config);
 
-    mTracerProvider = opentelemetry::nostd::shared_ptr<opentelemetry::trace::TracerProvider>(
-      new opentelemetry::sdk::trace::TracerProvider(
+    mSdkTracerProvider = std::make_shared<opentelemetry::sdk::trace::TracerProvider>(
             std::move(processor),
             opentelemetry::sdk::resource::Resource::Create(attributes),
-            std::move(sampler)
-            ));
+            std::move(sampler));
+    mTracerProvider = opentelemetry::nostd::shared_ptr<opentelemetry::trace::TracerProvider>(
+        mSdkTracerProvider);
+    registerProvider(mSdkTracerProvider);
 
     mTracer = mTracerProvider->GetTracer("cpp", cppSDKVersion);
     LOG4CXX_INFO(mLogger,
