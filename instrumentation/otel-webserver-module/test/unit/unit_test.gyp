@@ -58,7 +58,7 @@
           '$(ANSDK_DIR)/apache-log4cxx/1.8.0/lib/liblog4cxx.a',
           '$(ANSDK_DIR)/apr-util/1.6.5/lib/libaprutil-1.a',
           '$(ANSDK_DIR)/apr/1.7.6/lib/libapr-1.a',
-          '$(ANSDK_DIR)/expat/2.8.5/lib/libexpat.a',
+          '$(ANSDK_DIR)/expat/2.9.0/lib/libexpat.a',
           # Ubuntu's ld defaults to --as-needed and would drop these .so files, since the
           # static OTLP archives that reference them come later in the link line.
           '-Wl,--no-as-needed',

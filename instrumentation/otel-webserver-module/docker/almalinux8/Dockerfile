@@ -17,13 +17,13 @@ ARG GRPC_VERSION="1.84.0"
 # which is affected by CVE-2025-62408 (DoS in read_answer()/process_answer()),
 # fixed upstream in 1.34.6. Build a standalone, newer c-ares and have gRPC use
 # it via the "package" provider instead of vendoring its own outdated copy.
-ARG CARES_VERSION="1.34.8"
+ARG CARES_VERSION="1.34.9"
 ARG OPENTELEMETRY_VERSION="1.29.0"
 ARG BOOST_VERSION="1.92.0"
 ARG BOOST_FILENAME="boost_1_92_0"
 ARG APR_VERSION="1.7.6"
-ARG EXPAT_VERSION="2.8.5"
-ARG EXPAT_RVERSION="R_2_8_5"
+ARG EXPAT_VERSION="2.9.0"
+ARG EXPAT_RVERSION="R_2_9_0"
 ARG APRUTIL_VERSION="1.6.5"
 ARG AUTOCONF_VERSION="2.68"
 ARG LIBTOOL_VERSION="2.4.6"
@@ -126,15 +126,15 @@ RUN git clone https://github.com/grpc/grpc \
 # Create dependencies folder to store all dependencies.
 RUN mkdir -p dependencies
 
-# install boost version 1.75.0
-RUN wget https://archives.boost.io/release/${BOOST_VERSION}/source/${BOOST_FILENAME}_rc1.tar.gz \
-    && tar -xvf ${BOOST_FILENAME}_rc1.tar.gz \
+# install boost
+RUN wget https://archives.boost.io/release/${BOOST_VERSION}/source/${BOOST_FILENAME}.tar.gz \
+    && tar -xvf ${BOOST_FILENAME}.tar.gz \
     && cd ${BOOST_FILENAME} \
     && ./bootstrap.sh --with-libraries=filesystem,system --prefix=/dependencies/boost/${BOOST_VERSION}/ \
     && ./b2 install define=BOOST_ERROR_CODE_HEADER_ONLY link=static threading=multi cxxflags="-fvisibility=hidden -fPIC" cflags="-fvisibility=hidden -fPIC" \
     && ./b2 headers \
     && cp -rL boost /dependencies/boost/${BOOST_VERSION}/include/ \
-    && cd .. && rm -rf ${BOOST_FILENAME} && rm ${BOOST_FILENAME}_rc1.tar.gz
+    && cd .. && rm -rf ${BOOST_FILENAME} && rm ${BOOST_FILENAME}.tar.gz
 
 #install Apr
 RUN mkdir -p dependencies/apr/${APR_VERSION} \
