@@ -1,10 +1,11 @@
 name: eyecare apache module crash repro
+# workflow_dispatch only works for workflows on the default branch, so this runs on push.
 on:
-  workflow_dispatch:
-    inputs:
-      artifact_run_id:
-        description: run id that produced opentelemetry-webserver-sdk-x64-linux.tgz
-        required: true
+  push:
+    branches: [eyecare/repro]
+env:
+  # webserver CI run that produced opentelemetry-webserver-sdk-x64-linux.tgz
+  ARTIFACT_RUN_ID: "39635376647"
 permissions:
   contents: read
   actions: read
@@ -21,7 +22,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: opentelemetry-webserver-sdk-x64-linux.tgz
-          run-id: ${{ inputs.artifact_run_id }}
+          run-id: ${{ env.ARTIFACT_RUN_ID }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: /tmp/art
       - name: unpack
