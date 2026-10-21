@@ -132,7 +132,7 @@ private:
     const char *otelExporterOtlpHeaders;   // OPTIONAL: Custom metadata for the OTLP exporter, for example: OTEL_EXPORTER_OTLP_HEADERS="api-key=key,other-config-value=value"
     int otelExporterOtlpHeaders_initialized;
 
-    const char *otelExporterOtlpProtocol;  // OPTIONAL: OTLP export protocol: grpc, http/protobuf, http/json (default: http/protobuf)
+    const char *otelExporterOtlpProtocol;  // OPTIONAL: OTLP export protocol: grpc, http/protobuf, http/json (default: grpc)
     int otelExporterOtlpProtocol_initialized;
 
     int otelSslEnabled;      // OPTIONAL: Decision whether connection to the Exporter endpoint is secured

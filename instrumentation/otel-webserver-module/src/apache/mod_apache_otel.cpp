@@ -75,7 +75,7 @@ static const command_rec otel_cmds[] =
             (CMD_HAND_TYPE)ApacheConfigHandlers::otel_set_otelExporterOtlpProtocol,
             NULL,
             OR_ALL,
-            "OTLP export protocol: grpc, http/protobuf, or http/json (default: http/protobuf)"),
+            "OTLP export protocol: grpc, http/protobuf, or http/json (default: grpc)"),
     AP_INIT_TAKE1(
             "apacheModuleOtelSslEnabled",
             (CMD_HAND_TYPE)ApacheConfigHandlers::otel_set_otelSslEnabled,

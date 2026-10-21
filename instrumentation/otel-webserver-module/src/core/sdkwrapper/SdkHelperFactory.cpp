@@ -165,8 +165,12 @@ OtelSpanExporter SdkHelperFactory::GetExporter(
         }
 
         auto protocol = config->getOtelExporterOtlpProtocol();
+        // Default to gRPC, the only protocol earlier releases supported, so an
+        // existing configuration keeps exporting after an upgrade. Defaulting to
+        // http/protobuf would send the same "host:port" endpoint to the HTTP
+        // exporter, which expects a full URL, and silently stop the export.
         if (protocol.empty()) {
-            protocol = PROTOCOL_HTTP_PROTOBUF;
+            protocol = PROTOCOL_GRPC;
         }
 
         LOG4CXX_INFO(mLogger, "OTLP exporter protocol: " << protocol);
@@ -240,14 +244,14 @@ OtelSpanExporter SdkHelperFactory::GetExporter(
                     if (remove_cache.end() == remove_cache.find(key))
                     {
                         remove_cache.insert(key);
-                        auto it = opts.http_headers.find(key);
-                        if (it != opts.http_headers.end())
+                        auto range = opts.http_headers.equal_range(key);
+                        if (range.first != range.second)
                         {
-                            opts.http_headers.erase(it);
+                            opts.http_headers.erase(range.first, range.second);
                         }
                     }
 
-                    opts.http_headers[std::move(key)] = static_cast<std::string>(header_value);
+                    opts.http_headers.emplace(std::make_pair(std::move(key), static_cast<std::string>(header_value)));
                 }
             }
 
