@@ -46,7 +46,7 @@ Monitoring individual modules is crucial to the instrumentation of Apache web se
 |*ApacheModuleOtelSpanExporter*                 | otlp             | OPTIONAL: Specify the span exporter to be used. Supported values are "otlp" and "ostream". All other supported values would be added in future. |
 |*ApacheModuleOtelExporterEndpoint:*             |                 | REQUIRED: The endpoint otel exporter exports to. Example "docker.for.mac.localhost:4317" |
 |*ApacheModuleOtelSpanProcessor*                 | batch           | OPTIONAL: Specify the processor to select to. Supported values are "simple" and "batch".|
-|*ApacheModuleOtelSampler*                       | AlwaysOn        | OPTIONAL: Supported values are "AlwaysOn" and "AlwaysOff" |
+|*ApacheModuleOtelSampler*                       | parentbased_always_on | OPTIONAL: Supported values are "AlwaysOn", "AlwaysOff", "parentbased_always_on", "parentbased_always_off", "traceidratio" and "parentbased_traceidratio" (case, "_" and "-" are ignored). The ratio samplers read the ratio from OTEL_TRACES_SAMPLER_ARG (default 1.0). |
 |*ApacheModuleOtelMaxQueueSize*                  | 2048            | OPTIONAL: The maximum queue size. After the size is reached spans are dropped|
 |*ApacheModuleOtelScheduledDelayMillis*          | 5000            | OPTIONAL: The delay interval in milliseconds between two consecutive exports|
 |*ApacheModuleOtelExportTimeoutMillis*           | 30000           | OPTIONAL: How long the export can run in milliseconds before it is cancelled|
@@ -166,7 +166,7 @@ Currently, Nginx Webserver module monitores some fixed set of modules, which get
 |*NginxModuleOtelSpanExporter*                 | otlp             | OPTIONAL: Specify the span exporter to be used. Supported values are "otlp" and "ostream". All other supported values would be added in future. |
 |*NginxModuleOtelExporterEndpoint:*             |                 | REQUIRED: The endpoint otel exporter exports to. Example "docker.for.mac.localhost:4317" |
 |*NginxModuleOtelSpanProcessor*                 | batch           | OPTIONAL: Specify the processor to select to. Supported values are "simple" and "batch".|
-|*NginxModuleOtelSampler*                       | AlwaysOn        | OPTIONAL: Supported values are "AlwaysOn" and "AlwaysOff" |
+|*NginxModuleOtelSampler*                       | parentbased_always_on | OPTIONAL: Supported values are "AlwaysOn", "AlwaysOff", "parentbased_always_on", "parentbased_always_off", "traceidratio" and "parentbased_traceidratio" (case, "_" and "-" are ignored). The ratio samplers read the ratio from OTEL_TRACES_SAMPLER_ARG (default 1.0). |
 |*NginxModuleOtelMaxQueueSize*                  | 2048            | OPTIONAL: The maximum queue size. After the size is reached spans are dropped|
 |*NginxModuleOtelScheduledDelayMillis*          | 5000            | OPTIONAL: The delay interval in milliseconds between two consecutive exports|
 |*NginxModuleOtelExportTimeoutMillis*           | 30000           | OPTIONAL: How long the export can run in milliseconds before it is cancelled|

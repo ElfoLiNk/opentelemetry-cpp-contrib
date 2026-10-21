@@ -150,7 +150,9 @@ OTEL_SDK_STATUS_CODE RequestProcessingEngine::endRequest(
         LOG4CXX_TRACE(mLogger, "Setting status as error[" << errorStatus <<"] on root Span");
 
     } else {
-        rootSpan->SetStatus(StatusCode::Ok);
+        // Instrumentation leaves the status Unset on success; Ok is reserved for an
+        // explicit decision by the application.
+        rootSpan->SetStatus(StatusCode::Unset);
     }
     if (payload != nullptr) {
         for (auto itr = payload->response_headers.begin();
@@ -257,7 +259,7 @@ OTEL_SDK_API OTEL_SDK_STATUS_CODE RequestProcessingEngine::endInteraction(
         interactionSpan->AddAttribute("error_code", payload->errorCode);
         LOG4CXX_TRACE(mLogger, "Span updated with error Code: " << payload->errorCode);
     } else {
-        interactionSpan->SetStatus(StatusCode::Ok);
+        interactionSpan->SetStatus(StatusCode::Unset);
     }
 
     if (!payload->backendName.empty()) {

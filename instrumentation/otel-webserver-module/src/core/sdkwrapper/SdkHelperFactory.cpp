@@ -30,7 +30,9 @@
 #include "opentelemetry/exporters/otlp/otlp_environment.h"
 #include "opentelemetry/baggage/propagation/baggage_propagator.h"
 #include <module_version.h>
+#include <algorithm>
 #include <cctype>
+#include <cstdlib>
 #include <mutex>
 #include <vector>
 #include <chrono>
@@ -51,7 +53,12 @@ namespace {
   constexpr const char* ALWAYS_ON_SAMPLER = "always_on";
   constexpr const char* ALWAYS_OFF_SAMPLER = "always_off";
   constexpr const char* PARENT_BASED_SAMPLER = "parent";
+  constexpr const char* PARENT_BASED_ALWAYS_ON_SAMPLER = "parentbased_always_on";
+  constexpr const char* PARENT_BASED_ALWAYS_OFF_SAMPLER = "parentbased_always_off";
   constexpr const char* TRACE_ID_RATIO_BASED_SAMPLER = "trace_id_ratio";
+  constexpr const char* TRACE_ID_RATIO_BASED_SAMPLER_SPEC = "traceidratio";
+  constexpr const char* PARENT_BASED_TRACE_ID_RATIO_SAMPLER = "parentbased_traceidratio";
+  constexpr const char* kInstrumentationScopeName = "otel-webserver-module";
   constexpr const char* PROPAGATOR_TYPE_B3 = "b3";
   constexpr const char* PROTOCOL_GRPC = "grpc";
   constexpr const char* PROTOCOL_HTTP_PROTOBUF = "http/protobuf";
@@ -161,10 +168,12 @@ SdkHelperFactory::SdkHelperFactory(
         mSdkTracerProvider);
     registerProvider(mSdkTracerProvider);
 
-    mTracer = mTracerProvider->GetTracer("cpp", cppSDKVersion);
+    // The instrumentation scope is this module, not the C++ SDK it is built on (the
+    // SDK already reports itself through the telemetry.sdk.* resource attributes).
+    mTracer = mTracerProvider->GetTracer(kInstrumentationScopeName, libraryVersion);
     LOG4CXX_INFO(mLogger,
-        "Tracer created with LibraryName: " << "cpp" <<
-        " and LibraryVersion " << libraryVersion);
+        "Tracer created with LibraryName: " << kInstrumentationScopeName <<
+        " and LibraryVersion " << libraryVersion << " (opentelemetry-cpp " << cppSDKVersion << ")");
 
     // Adding trace propagator
     auto propagatorType = config->getOtelPropagatorType();
@@ -362,26 +371,61 @@ OtelSpanProcessor SdkHelperFactory::GetSpanProcessor(
 OtelSampler SdkHelperFactory::GetSampler(
     std::shared_ptr<TenantConfig> config)
 {
-    auto sampler = OtelSampler{};
     auto type = config->getOtelSamplerType();
 
-    if (isType(type, ALWAYS_OFF_SAMPLER)) {
-        sampler.reset(new sdk::trace::AlwaysOffSampler);
-    } else if (isType(type, TRACE_ID_RATIO_BASED_SAMPLER)) { // TODO
-        ;
-    } else if (isType(type, PARENT_BASED_SAMPLER)) { // TODO
-        ;
-    } else {
-        if (!isType(type, ALWAYS_ON_SAMPLER)) {
-          // default is always_on sampler
-          LOG4CXX_WARN(mLogger, "Received unknown sampler type: " << type << ". Will create default(always_on) sampler");
-          type = ALWAYS_ON_SAMPLER;
+    // Ratio for the trace id ratio samplers, from the standard OTEL_TRACES_SAMPLER_ARG
+    // (the module has no directive for it). Defaults to 1.0, out of range clamps.
+    auto ratio = [this]() {
+        double value = 1.0;
+        const char* arg = std::getenv("OTEL_TRACES_SAMPLER_ARG");
+        if (arg && *arg) {
+            try {
+                value = std::stod(arg);
+            } catch (const std::exception&) {
+                LOG4CXX_WARN(mLogger, "Invalid OTEL_TRACES_SAMPLER_ARG: " << arg << ". Using 1.0");
+                value = 1.0;
+            }
         }
+        return std::min(1.0, std::max(0.0, value));
+    };
+
+    auto parentBased = [](std::shared_ptr<sdk::trace::Sampler> root) {
+        return OtelSampler(new sdk::trace::ParentBasedSampler(std::move(root)));
+    };
+
+    auto sampler = OtelSampler{};
+    std::string description;
+    if (type.empty()) {
+        // The SDK specification default.
+        sampler = parentBased(std::make_shared<sdk::trace::AlwaysOnSampler>());
+        description = "parentbased_always_on (default)";
+    } else if (isType(type, ALWAYS_ON_SAMPLER)) {
         sampler.reset(new sdk::trace::AlwaysOnSampler);
+        description = ALWAYS_ON_SAMPLER;
+    } else if (isType(type, ALWAYS_OFF_SAMPLER)) {
+        sampler.reset(new sdk::trace::AlwaysOffSampler);
+        description = ALWAYS_OFF_SAMPLER;
+    } else if (isType(type, PARENT_BASED_SAMPLER) || isType(type, PARENT_BASED_ALWAYS_ON_SAMPLER)) {
+        // These two used to be a TODO that left the sampler null.
+        sampler = parentBased(std::make_shared<sdk::trace::AlwaysOnSampler>());
+        description = PARENT_BASED_ALWAYS_ON_SAMPLER;
+    } else if (isType(type, PARENT_BASED_ALWAYS_OFF_SAMPLER)) {
+        sampler = parentBased(std::make_shared<sdk::trace::AlwaysOffSampler>());
+        description = PARENT_BASED_ALWAYS_OFF_SAMPLER;
+    } else if (isType(type, TRACE_ID_RATIO_BASED_SAMPLER) || isType(type, TRACE_ID_RATIO_BASED_SAMPLER_SPEC)) {
+        sampler.reset(new sdk::trace::TraceIdRatioBasedSampler(ratio()));
+        description = TRACE_ID_RATIO_BASED_SAMPLER_SPEC;
+    } else if (isType(type, PARENT_BASED_TRACE_ID_RATIO_SAMPLER)) {
+        sampler = parentBased(std::make_shared<sdk::trace::TraceIdRatioBasedSampler>(ratio()));
+        description = PARENT_BASED_TRACE_ID_RATIO_SAMPLER;
+    } else {
+        LOG4CXX_WARN(mLogger, "Received unknown sampler type: " << type
+            << ". Will create default(parentbased_always_on) sampler");
+        sampler = parentBased(std::make_shared<sdk::trace::AlwaysOnSampler>());
+        description = "parentbased_always_on (default)";
     }
 
-    LOG4CXX_INFO(mLogger, "Sampler created with SamplerType : " <<
-        type);
+    LOG4CXX_INFO(mLogger, "Sampler created with SamplerType : " << description);
     return sampler;
 }
 
