@@ -1,5 +1,5 @@
 set -e
-dnf -q -y module enable php:7.2 >/dev/null 2>&1; dnf -q -y install php httpd mod_ssl gdb procps-ng openssl binutils >/dev/null 2>&1
+dnf -q -y module enable php:7.2 >/dev/null 2>&1; dnf -q -y install php httpd mod_ssl glibc-utils procps-ng openssl binutils python3 >/dev/null 2>&1
 cp -r /p/opentelemetry-webserver-sdk /opt/opentelemetry-webserver-sdk-1.29
 N=/opt/opentelemetry-webserver-sdk-1.29; mkdir -p $N/logs; chmod 777 $N/logs
 sed "s|__agent_log_dir__|$N/logs|g; s|/opt/opentelemetry-webserver-sdk/logs|$N/logs|g" $N/conf/opentelemetry_sdk_log4cxx.xml.template > $N/conf/opentelemetry_sdk_log4cxx.xml
@@ -35,31 +35,22 @@ openssl req -x509 -newkey rsa:2048 -nodes -subj /CN=localhost -keyout /etc/pki/t
 sed -i 's/^LoadModule mpm_event_module/#&/; s/^#LoadModule mpm_prefork_module/LoadModule mpm_prefork_module/' /etc/httpd/conf.modules.d/00-mpm.conf
 httpd -V | grep MPM
 cat > /etc/httpd/conf.d/zz-proxy.conf <<P
-Listen 8081
-<VirtualHost *:8081>
-  DocumentRoot /var/www/backend
-</VirtualHost>
 ProxyPass /api http://127.0.0.1:8081/
 ProxyPassReverse /api http://127.0.0.1:8081/
 P
 mkdir -p /var/www/backend && echo ok > /var/www/backend/index.html && echo '<?php echo "php ok";' > /var/www/html/t.php
 httpd -M 2>/dev/null | grep -E "php|proxy_http"
 httpd -t
-cat > /tmp/gdb.cmd <<'G'
-set pagination off
-set confirm off
-handle SIGPIPE nostop noprint
-run -X -DFOREGROUND
-echo \n==== BACKTRACE ====\n
-bt 60
-echo \n==== FRAME 0 ====\n
-info frame
-x/6i $pc
-echo \n==== THREADS ====\n
-info threads
-thread apply all bt 15
-G
-( sleep 20; for u in /t.php /api/; do curl -s -o /dev/null -m 10 -w "curl $u=%{http_code}\n" "http://127.0.0.1$u" || echo "curl $u FAILED"; done; sleep 10; pkill -INT gdb || true ) &
-timeout 150 gdb -q -batch -x /tmp/gdb.cmd /usr/sbin/httpd 2>&1 | grep -vE "^\[(New|Thread .* exited)|Downloading|Missing separate debuginfo|Try: dnf" | head -200
-wait
-echo "== sdk.log tail"; tail -8 $N/logs/sdk.log 2>/dev/null
+( cd /var/www/backend && python3 -m http.server 8081 >/tmp/backend.log 2>&1 & )
+sleep 2
+export SEGFAULT_SIGNALS="segv abrt bus ill fpe"
+mkdir -p /tmp/segv && chmod 777 /tmp/segv
+# libSegFault writes a backtrace to SEGFAULT_OUTPUT_NAME; children inherit the env.
+LD_PRELOAD=/lib64/libSegFault.so SEGFAULT_OUTPUT_NAME=/tmp/segv/trace.txt /usr/sbin/httpd -k start
+sleep 15
+for r in 1 2 3; do for u in / /t.php /api/ /api/index.html /t.php /api/; do curl -s -o /dev/null -m 10 -w "round $r curl $u=%{http_code}\n" "http://127.0.0.1$u" || echo "round $r curl $u FAILED"; done; done
+sleep 8
+echo "== segfaults in error_log"; grep -c "Segmentation fault" /var/log/httpd/error_log || true
+grep -E "exit signal" /var/log/httpd/error_log | head -5
+echo "== libSegFault trace"; cat /tmp/segv/trace.txt 2>/dev/null | head -80
+echo "== sdk.log tail"; tail -15 $N/logs/sdk.log 2>/dev/null | sed -E "s/^[0-9-]+ [0-9:.]+ UTC //"
