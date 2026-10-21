@@ -43,6 +43,22 @@ const std::string kOtelAttributes             = "otel.attribute.";
 const std::string kAttrHTTPUserAgent          = "http.user_agent";
 const std::string kAttrNETPeerPort            = "net.remote.port";
 
+// Stable HTTP semantic conventions (semconv 1.23+). Emitted next to the old names
+// above, as the "http/dup" migration mode does, so dashboards and queries on the old
+// attributes keep working while consumers move to these.
+const std::string kAttrStableHTTPRequestMethod     = "http.request.method";
+const std::string kAttrStableURLScheme             = "url.scheme";
+const std::string kAttrStableURLPath               = "url.path";
+const std::string kAttrStableURLQuery              = "url.query";
+const std::string kAttrStableServerAddress         = "server.address";
+const std::string kAttrStableServerPort            = "server.port";
+const std::string kAttrStableNetworkProtocolName    = "network.protocol.name";
+const std::string kAttrStableNetworkProtocolVersion = "network.protocol.version";
+const std::string kAttrStableClientAddress         = "client.address";
+const std::string kAttrStableNetworkPeerPort       = "network.peer.port";
+const std::string kAttrStableUserAgentOriginal     = "user_agent.original";
+const std::string kAttrStableHTTPResponseStatusCode = "http.response.status_code";
+
 constexpr int HTTP_ERROR_1XX = 100;
 constexpr int HTTP_ERROR_4XX = 400;
 constexpr int HTTP_ERROR_5XX = 500;

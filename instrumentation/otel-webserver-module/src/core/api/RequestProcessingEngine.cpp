@@ -78,6 +78,28 @@ OTEL_SDK_STATUS_CODE RequestProcessingEngine::startRequest(
     keyValueMap[kAttrHTTPUserAgent] = payload->get_user_agent();
     keyValueMap[kAttrNETPeerPort] = payload->get_peer_port();
 
+    // Stable semantic conventions, next to the old names above. url.path and
+    // url.query split the request target; both strings must outlive CreateSpan,
+    // since the map holds string_views.
+    const std::string& target = payload->get_target();
+    const auto queryPos = target.find('?');
+    const std::string urlPath = target.substr(0, queryPos);
+    const std::string urlQuery =
+        queryPos == std::string::npos ? std::string() : target.substr(queryPos + 1);
+    keyValueMap[kAttrStableHTTPRequestMethod] = payload->get_http_request_method();
+    keyValueMap[kAttrStableURLScheme] = payload->get_scheme();
+    keyValueMap[kAttrStableURLPath] = urlPath;
+    if (queryPos != std::string::npos) {
+        keyValueMap[kAttrStableURLQuery] = urlQuery;
+    }
+    keyValueMap[kAttrStableServerAddress] = payload->get_host();
+    keyValueMap[kAttrStableServerPort] = payload->get_port();
+    keyValueMap[kAttrStableNetworkProtocolName] = opentelemetry::nostd::string_view("http");
+    keyValueMap[kAttrStableNetworkProtocolVersion] = payload->get_flavor();
+    keyValueMap[kAttrStableClientAddress] = payload->get_client_ip();
+    keyValueMap[kAttrStableUserAgentOriginal] = payload->get_user_agent();
+    keyValueMap[kAttrStableNetworkPeerPort] = payload->get_peer_port();
+
     auto& request_headers = payload->get_request_headers();
     for (auto itr = request_headers.begin(); itr != request_headers.end(); itr++) {
         std::string key = std::string(http_request_header) +
@@ -168,6 +190,7 @@ OTEL_SDK_STATUS_CODE RequestProcessingEngine::endRequest(
         }
 
         rootSpan->AddAttribute(kAttrHTTPStatusCode, payload->status_code);
+        rootSpan->AddAttribute(kAttrStableHTTPResponseStatusCode, payload->status_code);
     }
 
     LOG4CXX_TRACE(mLogger, "Ending root span with id: " << rootSpan.get());

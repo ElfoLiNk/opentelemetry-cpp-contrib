@@ -159,6 +159,16 @@ TEST(TestRequestProcessingEngine, StartRequest)
 	keyValueMap[kAttrHTTPClientIP] = (opentelemetry::nostd::string_view)"clientip";
 	keyValueMap[kAttrNETPeerPort] = (long)12345;
 	keyValueMap[kAttrHTTPUserAgent] = (opentelemetry::nostd::string_view)"useragent";
+	keyValueMap[kAttrStableHTTPRequestMethod] = (opentelemetry::nostd::string_view)"GET";
+	keyValueMap[kAttrStableURLScheme] = (opentelemetry::nostd::string_view)"http";
+	keyValueMap[kAttrStableURLPath] = (opentelemetry::nostd::string_view)"target";
+	keyValueMap[kAttrStableServerAddress] = (opentelemetry::nostd::string_view)"host";
+	keyValueMap[kAttrStableServerPort] = (long)80;
+	keyValueMap[kAttrStableNetworkProtocolName] = (opentelemetry::nostd::string_view)"http";
+	keyValueMap[kAttrStableNetworkProtocolVersion] = (opentelemetry::nostd::string_view)"1.1";
+	keyValueMap[kAttrStableClientAddress] = (opentelemetry::nostd::string_view)"clientip";
+	keyValueMap[kAttrStableNetworkPeerPort] = (long)12345;
+	keyValueMap[kAttrStableUserAgentOriginal] = (opentelemetry::nostd::string_view)"useragent";
 	std::shared_ptr<otel::core::sdkwrapper::IScopedSpan> span;
 	span.reset(new MockScopedSpan);
 
@@ -240,6 +250,9 @@ TEST(TestRequestProcessingEngine, EndRequest)
 	EXPECT_CALL(*getMockSpan(rootSpan), SetStatus(otel::core::sdkwrapper::StatusCode::Error, "HTTP ERROR CODE:403")).Times(1);
 	EXPECT_CALL(*getMockSpan(rootSpan),
 		AddAttribute(kAttrHTTPStatusCode,
+			HasUnsignedIntValue(status_code))).Times(1);
+	EXPECT_CALL(*getMockSpan(rootSpan),
+		AddAttribute(kAttrStableHTTPResponseStatusCode,
 			HasUnsignedIntValue(status_code))).Times(1);
 	
 	EXPECT_CALL(*getMockSpan(rootSpan), End()).
