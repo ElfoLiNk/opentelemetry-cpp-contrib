@@ -236,7 +236,7 @@ RUN printf 'find_package(absl CONFIG REQUIRED)\nfind_package(utf8_range CONFIG R
     && mkdir build \
     && cd build \
     && cmake .. -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=ON -DOTELCPP_WITH_OTLP_GRPC=ON -DOTELCPP_WITH_OTLP_HTTP=ON -DCMAKE_CXX_STANDARD=17 -DCMAKE_PROJECT_INCLUDE=/usr/local/lib/cmake/grpc-preload.cmake -DCMAKE_INSTALL_PREFIX=/dependencies/opentelemetry/${OPENTELEMETRY_VERSION} \
-    && cmake --build . --target all \
+    && cmake --build . --target all -j"$(nproc)" \
     && cd .. \
     && find . -name "*.so" -type f -exec cp {} /dependencies/opentelemetry/${OPENTELEMETRY_VERSION}/lib/ \; \
     && (find build -iname "libopentelemetry_proto*" -exec cp {} /dependencies/opentelemetry/${OPENTELEMETRY_VERSION}/lib/ \; ; find . -iname "libopentelemetry_proto*" -exec cp {} /dependencies/opentelemetry/${OPENTELEMETRY_VERSION}/lib/ \;) \
@@ -244,6 +244,7 @@ RUN printf 'find_package(absl CONFIG REQUIRED)\nfind_package(utf8_range CONFIG R
     && cp -r api/include/ /dependencies/opentelemetry/${OPENTELEMETRY_VERSION}/ \
     && for dir in exporters/*; do if [ -d "$dir" ]; then cp -rf "$dir/include" /dependencies/opentelemetry/${OPENTELEMETRY_VERSION}/; fi; done \
     && cp -r sdk/include/ /dependencies/opentelemetry/${OPENTELEMETRY_VERSION}/ \
+    && cp -r ext/include/ /dependencies/opentelemetry/${OPENTELEMETRY_VERSION}/ \
     && PROTO_DIR=$(find . -type d -iname proto -path '*opentelemetry*' -exec sh -c 'find "$1" -name "*.pb.h" | head -1 | grep -q .' _ {} \; -print | head -1) \
     && echo "PROTO_DIR=$PROTO_DIR" \
     && cp -r "$PROTO_DIR" /dependencies/opentelemetry/${OPENTELEMETRY_VERSION}/include/opentelemetry/ \
