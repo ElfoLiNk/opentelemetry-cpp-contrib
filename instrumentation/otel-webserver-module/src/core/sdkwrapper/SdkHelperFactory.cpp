@@ -31,6 +31,7 @@
 #include "opentelemetry/baggage/propagation/baggage_propagator.h"
 #include <module_version.h>
 #include <cctype>
+#include <chrono>
 #include <fstream>
 #include <iostream>
 
@@ -178,6 +179,9 @@ OtelSpanExporter SdkHelperFactory::GetExporter(
         if (protocol == PROTOCOL_GRPC) {
             opentelemetry::exporter::otlp::OtlpGrpcExporterOptions opts;
             opts.endpoint = config->getOtelExporterEndpoint();
+            if (config->getOtelExportTimeoutMillis() > 0) {
+                opts.timeout = std::chrono::milliseconds(config->getOtelExportTimeoutMillis());
+            }
             if (config->getOtelSslEnabled()) {
                 opts.use_ssl_credentials = config->getOtelSslEnabled();
                 opts.ssl_credentials_cacert_path = config->getOtelSslCertPath();
@@ -219,6 +223,9 @@ OtelSpanExporter SdkHelperFactory::GetExporter(
 
             opentelemetry::exporter::otlp::OtlpHttpExporterOptions opts;
             opts.url = config->getOtelExporterEndpoint();
+            if (config->getOtelExportTimeoutMillis() > 0) {
+                opts.timeout = std::chrono::milliseconds(config->getOtelExportTimeoutMillis());
+            }
 
             if (protocol == PROTOCOL_HTTP_JSON) {
                 opts.content_type = opentelemetry::exporter::otlp::HttpRequestContentType::kJson;
@@ -279,7 +286,29 @@ OtelSpanProcessor SdkHelperFactory::GetSpanProcessor(
            LOG4CXX_WARN(mLogger, "Received unknown processor type: " << type << ". Will create default(batch) processor");
            type = BATCH_PROCESSOR;
         }
+        // ApacheModuleOtelMaxQueueSize, ...ScheduledDelay and ...MaxExportBatchSize are
+        // parsed into the TenantConfig; 0 means unset, so keep the SDK default then.
         opentelemetry::sdk::trace::BatchSpanProcessorOptions options;
+        if (config->getOtelMaxQueueSize() > 0) {
+            options.max_queue_size = config->getOtelMaxQueueSize();
+        }
+        if (config->getOtelScheduledDelayMillis() > 0) {
+            options.schedule_delay_millis =
+                std::chrono::milliseconds(config->getOtelScheduledDelayMillis());
+        }
+        if (config->getOtelMaxExportBatchSize() > 0) {
+            options.max_export_batch_size = config->getOtelMaxExportBatchSize();
+        }
+        // The SDK rejects nothing here, but a batch larger than the queue can never fill.
+        if (options.max_export_batch_size > options.max_queue_size) {
+            LOG4CXX_WARN(mLogger, "MaxExportBatchSize " << options.max_export_batch_size
+                << " is larger than MaxQueueSize " << options.max_queue_size
+                << ", using MaxQueueSize");
+            options.max_export_batch_size = options.max_queue_size;
+        }
+        LOG4CXX_INFO(mLogger, "Batch processor options: max_queue_size=" << options.max_queue_size
+            << " schedule_delay_millis=" << options.schedule_delay_millis.count()
+            << " max_export_batch_size=" << options.max_export_batch_size);
         processor.reset(
             new opentelemetry::sdk::trace::BatchSpanProcessor(std::move(exporter), options));
     }

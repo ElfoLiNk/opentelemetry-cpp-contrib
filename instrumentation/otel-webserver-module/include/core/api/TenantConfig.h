@@ -88,17 +88,17 @@ private:
     std::string otelExporterEndpoint;
     std::string otelExporterOtlpHeaders;
     std::string otelExporterOtlpProtocol;
-    bool otelSslEnabled;
+    bool otelSslEnabled = false;
     std::string otelSslCertPath;
     std::string otelPropagatorType;
 
     std::string otelProcessorType;
     std::string otelSamplerType;
 
-    unsigned otelMaxQueueSize;
-    unsigned otelScheduledDelayMillis;
-    unsigned otelExportTimeoutMillis;
-    unsigned otelMaxExportBatchSize;
+    unsigned otelMaxQueueSize = 0;
+    unsigned otelScheduledDelayMillis = 0;
+    unsigned otelExportTimeoutMillis = 0;
+    unsigned otelMaxExportBatchSize = 0;
 
     //Span Limits(AttributeCountLimit, EventCountLimit, LinkCountLimit, AttributePerEventCountLimit, AttributePerLinkCountLimit
     //: configuration options have not been added for these; as of now they will have their default vaules

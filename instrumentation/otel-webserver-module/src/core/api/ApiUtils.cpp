@@ -169,17 +169,18 @@ OTEL_SDK_STATUS_CODE ApiUtils::ReadSettingsFromReader(
     std::string otelExporterEndpoint;
     std::string otelExporterOtlpHeaders;
     std::string otelExporterOtlpProtocol;
-    bool otelSslEnabled;
+    bool otelSslEnabled = false;
     std::string otelSslCertPath;
     std::string otelLibraryName;
     std::string otelProcessorType;
     std::string otelPropagatorType;
     std::string otelSamplerType;
 
-    unsigned otelMaxQueueSize;
-    unsigned otelScheduledDelayMillis;
-    //unsigned otelExportTimeoutMillis;
-    unsigned otelMaxExportBatchSize;
+    // 0 means "not configured": SdkHelperFactory then keeps the SDK default.
+    unsigned otelMaxQueueSize = 0;
+    unsigned otelScheduledDelayMillis = 0;
+    unsigned otelExportTimeoutMillis = 0;
+    unsigned otelMaxExportBatchSize = 0;
 
     std::string segmentType;
     std::string segmentParameter;
@@ -250,10 +251,10 @@ OTEL_SDK_STATUS_CODE ApiUtils::ReadSettingsFromReader(
     if(OTEL_ISFAIL(status))
         return status;
 
-    /*status = reader.ReadOptionalFromReader(
-        reader, std::string(OTEL_SDK_ENV_EXPORT_BATCH_SIZE), setOtelExportTimeoutMillis);
+    status = ReadOptionalFromReader(
+        reader, std::string(OTEL_SDK_ENV_EXPORT_TIMEOUT), otelExportTimeoutMillis);
     if(OTEL_ISFAIL(status))
-        return status;*/
+        return status;
 
     reader.ReadOptional(
         std::string(OTEL_SDK_ENV_SEGMENT_TYPE), segmentType);
@@ -292,7 +293,7 @@ OTEL_SDK_STATUS_CODE ApiUtils::ReadSettingsFromReader(
     tenantConfig.setOtelMaxQueueSize(otelMaxQueueSize);
     tenantConfig.setOtelScheduledDelayMillis(otelScheduledDelayMillis);
     tenantConfig.setOtelMaxExportBatchSize(otelMaxExportBatchSize);
-    //tenantConfig.setOtelMaxExportBatchSize(setOtelExportTimeoutMillis);
+    tenantConfig.setOtelExportTimeoutMillis(otelExportTimeoutMillis);
     tenantConfig.setOtelSslEnabled(otelSslEnabled);
     tenantConfig.setOtelSslCertPath(otelSslCertPath);
 
