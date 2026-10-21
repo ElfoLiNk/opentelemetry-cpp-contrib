@@ -1,5 +1,5 @@
 set -e
-dnf -q -y module enable php:7.2 >/dev/null 2>&1; dnf -q -y install php httpd mod_ssl glibc-utils procps-ng openssl binutils python3 >/dev/null 2>&1
+dnf -q -y module enable php:7.2 >/dev/null 2>&1; dnf -q -y install php httpd mod_ssl glibc-utils procps-ng openssl binutils python3 libnsl >/dev/null 2>&1
 cp -r /p/opentelemetry-webserver-sdk /opt/opentelemetry-webserver-sdk-1.29
 N=/opt/opentelemetry-webserver-sdk-1.29; mkdir -p $N/logs; chmod 777 $N/logs
 sed "s|__agent_log_dir__|$N/logs|g; s|/opt/opentelemetry-webserver-sdk/logs|$N/logs|g" $N/conf/opentelemetry_sdk_log4cxx.xml.template > $N/conf/opentelemetry_sdk_log4cxx.xml
