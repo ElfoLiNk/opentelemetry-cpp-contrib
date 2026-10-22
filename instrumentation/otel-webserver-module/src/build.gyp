@@ -42,6 +42,9 @@
           '-std=c++17',
           '-g',
           '-O1 -D_FORTIFY_SOURCE=1',
+          # Falling off the end of a non-void function is UB that GCC exploits at -O1+;
+          # WSAgent::term() did it and every Apache child segfaulted on exit.
+          '-Werror=return-type',
         ],
 
         'library_dirs': [

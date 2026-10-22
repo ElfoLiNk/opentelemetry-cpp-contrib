@@ -89,6 +89,11 @@ WSAgent::term()
     {
         mAgentCore->stop();
     }
+    // This used to fall off the end of a non-void function. That is undefined
+    // behaviour, and GCC 8 at -O2 treats the path as unreachable: on return from
+    // stop() execution ran on into the next function (checkPID) with a garbage this
+    // and every Apache child segfaulted on exit.
+    return OTEL_SUCCESS;
 }
 
 OTEL_SDK_STATUS_CODE

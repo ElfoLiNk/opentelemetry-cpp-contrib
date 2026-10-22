@@ -40,6 +40,8 @@
                 '-pipe -Wall -Wp,-O1 -D_FORTIFY_SOURCE=1 -fexceptions -fstack-protector',
                 '--param=ssp-buffer-size=4 -mtune=generic -fno-strict-aliasing',
                 '-Wno-unused-local-typedefs',
+          '-Werror=return-type',
+                '-Werror=return-type',
                 '-std=c++17 $(ARCH_FLAG)',
             ],
 
@@ -72,6 +74,7 @@
           '-pipe -Wall -Wp,-O1 -D_FORTIFY_SOURCE=1 -fexceptions -fstack-protector',
           '--param=ssp-buffer-size=4 -mtune=generic -fno-strict-aliasing',
           '-Wno-unused-local-typedefs',
+          '-Werror=return-type',
           '-std=c++17',
         ],
         'linkflags': [
