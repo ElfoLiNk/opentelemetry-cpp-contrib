@@ -43,27 +43,14 @@ httpd -M 2>/dev/null | grep -E "php|proxy_http"
 httpd -t
 ( cd /var/www/backend && python3 -m http.server 8081 >/tmp/backend.log 2>&1 & )
 sleep 2
-# Old upstream module (webserver/v1.1.0, opentelemetry-cpp 1.2.0) installed the way FEQ01 has it.
-O=/opt/opentelemetry-webserver-sdk
-curl -sSLf -o /tmp/old.tgz https://github.com/open-telemetry/opentelemetry-cpp-contrib/releases/download/webserver/v1.1.0/opentelemetry-webserver-sdk-x64-linux.tgz
-tar -xzf /tmp/old.tgz -C /opt; mkdir -p $O/logs; chmod 777 $O/logs
-sed "s|__agent_log_dir__|$O/logs|g" $O/conf/opentelemetry_sdk_log4cxx.xml.template > $O/conf/opentelemetry_sdk_log4cxx.xml
-sed -e "s|$N/|$O/|g" -e "/instrumentation_scope\|libopentelemetry_logs\|libopentelemetry_metrics\|http_client_curl/d" /etc/httpd/conf.modules.d/99-otel.conf \
-  | sed "s|^LoadFile $O/sdk_lib/lib/libopentelemetry_exporter_ostream_span.so|LoadFile $O/sdk_lib/lib/libopentelemetry_otlp_recordable.so\nLoadFile $O/sdk_lib/lib/libopentelemetry_exporter_ostream_span.so\nLoadFile $O/sdk_lib/lib/libopentelemetry_exporter_otlp_grpc.so|" > /tmp/old-otel.conf
-cp /etc/httpd/conf.modules.d/99-otel.conf /tmp/new-otel.conf
+export SEGFAULT_SIGNALS="segv abrt bus ill fpe"
+mkdir -p /tmp/segv && chmod 777 /tmp/segv
 traffic() { for u in / /t.php /api/ /t.php /api/; do curl -s -o /dev/null -m 10 -w "$1 curl $u=%{http_code}\n" "http://127.0.0.1$u" || echo "$1 curl $u FAILED"; done; }
 segv() { echo "$1 segfaults so far: $(grep -c 'Segmentation fault' /var/log/httpd/error_log)"; }
-
-echo "== phase 1: old module, fresh start"
-cp /tmp/old-otel.conf /etc/httpd/conf.modules.d/99-otel.conf; httpd -t
-/usr/sbin/httpd -k start; sleep 10; traffic old; sleep 3; segv old
-
-echo "== phase 2: switch to new module with graceful (what was done on FEQ01)"
-cp /tmp/new-otel.conf /etc/httpd/conf.modules.d/99-otel.conf; httpd -t
-/usr/sbin/httpd -k graceful; sleep 10; traffic graceful; sleep 3; segv graceful
-grep -E "exit signal" /var/log/httpd/error_log | tail -3
-
-echo "== phase 3: full stop/start with new module"
-/usr/sbin/httpd -k stop; sleep 5; : > /var/log/httpd/error_log
-/usr/sbin/httpd -k start; sleep 10; traffic restart; sleep 3; segv restart
-echo "== sdk.log (new) tail"; tail -4 $N/logs/sdk.log 2>/dev/null | sed -E "s/^[0-9-]+ [0-9:.]+ UTC //"
+echo "== new module: start, traffic, stop (child exit path)"
+LD_PRELOAD=/lib64/libSegFault.so SEGFAULT_OUTPUT_NAME=/tmp/segv/trace.txt /usr/sbin/httpd -k start
+sleep 10; traffic run; sleep 8; segv run
+/usr/sbin/httpd -k graceful-stop; sleep 12; segv after-graceful-stop
+grep -E "exit signal|terminating agent|Shutdown" /var/log/httpd/error_log | tail -4
+echo "== libSegFault trace"; cat /tmp/segv/trace.txt 2>/dev/null | head -70
+echo "== sdk.log tail"; tail -6 $N/logs/sdk.log 2>/dev/null | sed -E "s/^[0-9-]+ [0-9:.]+ UTC //"
