@@ -1,5 +1,5 @@
 set -e
-dnf -q -y module enable php:7.2 >/dev/null 2>&1; dnf -q -y install php httpd mod_ssl glibc-utils procps-ng openssl binutils python3 libnsl >/dev/null 2>&1
+dnf -q -y module enable php:7.2 >/dev/null 2>&1; dnf -q -y install php httpd mod_ssl glibc-utils gdb procps-ng openssl binutils python3 libnsl >/dev/null 2>&1
 cp -r /p/opentelemetry-webserver-sdk /opt/opentelemetry-webserver-sdk-1.29
 N=/opt/opentelemetry-webserver-sdk-1.29; mkdir -p $N/logs; chmod 777 $N/logs
 sed "s|__agent_log_dir__|$N/logs|g; s|/opt/opentelemetry-webserver-sdk/logs|$N/logs|g" $N/conf/opentelemetry_sdk_log4cxx.xml.template > $N/conf/opentelemetry_sdk_log4cxx.xml
@@ -50,7 +50,13 @@ segv() { echo "$1 segfaults so far: $(grep -c 'Segmentation fault' /var/log/http
 echo "== new module: start, traffic, stop (child exit path)"
 LD_PRELOAD=/lib64/libSegFault.so SEGFAULT_OUTPUT_NAME=/tmp/segv/trace.txt /usr/sbin/httpd -k start
 sleep 10; traffic run; sleep 8; segv run
+# attach gdb to two children that served requests, then stop
+for c in $(pgrep -f "httpd -k start" | sort -n | sed -n "2,3p"); do
+  gdb -q -batch -p $c -ex "handle SIGTERM nostop noprint pass" -ex "handle SIGUSR1 nostop noprint pass" -ex "handle SIGWINCH nostop noprint pass" -ex "handle SIGPIPE nostop noprint pass" -ex continue -ex "echo \\n==== BT child $c ====\\n" -ex "bt 40" > /tmp/gdb-$c.txt 2>&1 &
+done
+sleep 6
 /usr/sbin/httpd -k graceful-stop; sleep 12; segv after-graceful-stop
+sleep 3; for f in /tmp/gdb-*.txt; do echo "##### $f"; grep -vE "^\\[(New|Thread)|Reading symbols|Missing separate|Try: dnf|warning:" $f | head -60; done
 grep -E "exit signal|terminating agent|Shutdown" /var/log/httpd/error_log | tail -4
 echo "== libSegFault trace"; cat /tmp/segv/trace.txt 2>/dev/null | head -70
 echo "== sdk.log tail"; tail -6 $N/logs/sdk.log 2>/dev/null | sed -E "s/^[0-9-]+ [0-9:.]+ UTC //"
