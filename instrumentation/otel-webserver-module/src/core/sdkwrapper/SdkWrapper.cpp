@@ -92,9 +92,11 @@ void SdkWrapper::PopulatePropagationHeaders(
 	}
 	// copy all relevant kv pairs into carrier
 	for (int i = 0; i < CARRIER_HEADER_LEN; i++) {
-		auto carrier_header = otelCarrier.Get(CARRIER_HEADER_NAME[i]).data();
-		if(carrier_header != ""){
-			carrier[CARRIER_HEADER_NAME[i]] = otelCarrier.Get(CARRIER_HEADER_NAME[i]).data();
+		// Comparing .data() with "" compared pointers, which is always unequal, so
+		// headers the propagators never set were copied as empty values too.
+		auto carrier_header = otelCarrier.Get(CARRIER_HEADER_NAME[i]);
+		if (!carrier_header.empty()) {
+			carrier[CARRIER_HEADER_NAME[i]] = std::string(carrier_header.data(), carrier_header.size());
 		}
 	}
 }

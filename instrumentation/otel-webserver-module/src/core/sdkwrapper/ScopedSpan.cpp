@@ -66,6 +66,9 @@ void ScopedSpan::SetStatus(const StatusCode status, const std::string& desc)
     case StatusCode::Ok : {
       otelStatus = trace::StatusCode::kOk;
     } break;
+    case StatusCode::Unset : {
+      otelStatus = trace::StatusCode::kUnset;
+    } break;
   }
 
   mSpan->SetStatus(otelStatus, desc);

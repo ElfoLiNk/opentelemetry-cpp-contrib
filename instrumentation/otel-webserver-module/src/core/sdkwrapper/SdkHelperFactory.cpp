@@ -318,7 +318,7 @@ OtelSpanExporter SdkHelperFactory::GetExporter(
 
     LOG4CXX_INFO(mLogger, "Exporter created with ExporterType: "
         << type);
-    return std::move(exporter);
+    return exporter;
 }
 
 OtelSpanProcessor SdkHelperFactory::GetSpanProcessor(

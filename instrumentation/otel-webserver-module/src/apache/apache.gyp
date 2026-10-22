@@ -41,7 +41,13 @@
                 '--param=ssp-buffer-size=4 -mtune=generic -fno-strict-aliasing',
                 '-Wno-unused-local-typedefs',
           '-Werror=return-type',
+          '-Werror=format-security',
+          '-Werror=address',
                 '-Werror=return-type',
+          '-Werror=format-security',
+          '-Werror=address',
+                '-Werror=format-security',
+                '-Werror=address',
                 '-std=c++17 $(ARCH_FLAG)',
             ],
 
@@ -75,6 +81,8 @@
           '--param=ssp-buffer-size=4 -mtune=generic -fno-strict-aliasing',
           '-Wno-unused-local-typedefs',
           '-Werror=return-type',
+          '-Werror=format-security',
+          '-Werror=address',
           '-std=c++17',
         ],
         'linkflags': [

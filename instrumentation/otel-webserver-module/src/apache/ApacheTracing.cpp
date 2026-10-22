@@ -82,7 +82,8 @@ void ApacheTracing::logStartupTrace(server_rec* s)
 
         for (auto it = m_startupTrace.begin(); it != m_startupTrace.end(); it++)
         {
-            ap_log_error(APLOG_MARK, APLOG_ERR, 0, s, it->c_str());
+            // The buffered message is data, not a format: a '%' in it (a URI, say) was undefined behaviour.
+            ap_log_error(APLOG_MARK, APLOG_ERR, 0, s, "%s", it->c_str());
         }
     }
     else // default to DEBUG

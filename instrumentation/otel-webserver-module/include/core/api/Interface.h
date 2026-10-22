@@ -28,6 +28,7 @@ class IRequestProcessingEngine;
 class IEnvReader
 {
 public:
+    virtual ~IEnvReader() = default;
     virtual OTEL_SDK_STATUS_CODE ReadMandatory(
     	const std::string& varName, std::string& result) = 0;
     virtual OTEL_SDK_STATUS_CODE ReadOptional(
